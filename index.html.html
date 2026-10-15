@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7fb">
+  <title>白クロス変換ツール</title>
+  <style>
+    :root { color-scheme: light; --ink:#172033; --muted:#5b6475; --line:#d8deea; --blue:#2458c6; --pale:#eef3ff; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:#f4f7fb; color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; line-height:1.55; }
+    main { width:min(100% - 28px, 680px); margin:24px auto; }
+    .panel { background:white; border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:0 5px 20px rgba(20,40,80,.05); }
+    h1 { font-size:1.55rem; margin:0 0 6px; }
+    .intro { color:var(--muted); margin:0 0 22px; font-size:.96rem; }
+    label { display:block; font-weight:700; margin:18px 0 7px; }
+    textarea, select { width:100%; font:inherit; border:1px solid #b9c3d5; border-radius:10px; padding:12px; background:white; color:var(--ink); }
+    textarea { min-height:112px; resize:vertical; }
+    select { min-height:48px; }
+    .hint { color:var(--muted); font-size:.86rem; margin:6px 0 0; }
+    button { width:100%; min-height:48px; border:0; border-radius:10px; font:inherit; font-weight:750; cursor:pointer; margin-top:14px; padding:11px 14px; }
+    .primary { background:var(--blue); color:white; }
+    .secondary { background:var(--pale); color:#1e469a; border:1px solid #c8d7ff; }
+    .result { background:#f8faff; border:1px solid var(--line); border-radius:10px; padding:13px; min-height:56px; white-space:pre-wrap; overflow-wrap:anywhere; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .status { min-height:1.4em; margin:8px 0 0; color:#276749; font-size:.9rem; }
+    details { margin-top:18px; color:var(--muted); font-size:.9rem; }
+    summary { cursor:pointer; font-weight:700; color:var(--ink); }
+    footer { color:var(--muted); font-size:.8rem; text-align:center; margin:14px 0 0; }
+    @media (max-width:420px) { main { width:min(100% - 18px,680px); margin:10px auto; } .panel { padding:17px; border-radius:14px; } h1 { font-size:1.35rem; } }
+  </style>
+</head>
+<body>
+<main>
+  <section class="panel">
+    <h1>白クロス変換ツール</h1>
+    <p class="intro">クロスの色を選んで、スクランブルを白クロス用の表記に変換します。</p>
+
+    <label for="scramble">スクランブルを入力</label>
+    <textarea id="scramble" placeholder="例：R U R' U' F2 D L2" autocapitalize="off" spellcheck="false"></textarea>
+    <p class="hint">手順の間はスペースで区切ってください。</p>
+
+    <label for="color">元のクロスの色</label>
+    <select id="color">
+      <option value="黄クロス">黄クロス</option>
+      <option value="緑クロス">緑クロス</option>
+      <option value="青クロス">青クロス</option>
+      <option value="オレンジクロス">オレンジクロス</option>
+      <option value="赤クロス">赤クロス</option>
+    </select>
+
+    <button class="primary" id="convert">白クロス用に変換</button>
+
+    <label for="result">変換結果</label>
+    <div id="result" class="result" aria-live="polite">ここに変換結果が表示されます。</div>
+    <button class="secondary" id="copy">結果をコピー</button>
+    <p id="status" class="status" aria-live="polite"></p>
+
+    <details>
+      <summary>使い方</summary>
+      <ol>
+        <li>スクランブルを入力します。</li>
+        <li>そのスクランブルで使うクロスの色を選びます。</li>
+        <li>「白クロス用に変換」を押します。</li>
+        <li>「結果をコピー」を押すと、変換結果を貼り付けられます。</li>
+      </ol>
+      <p>このページは入力内容を外部に送信しません。変換はブラウザ内で行います。</p>
+    </details>
+  </section>
+  <footer>スマホ・パソコンのブラウザで使えます</footer>
+</main>
+<script>
+  const conversionMap = {
+    "黄クロス": { U:"D", D:"U", R:"L", L:"R", F:"B", B:"F" },
+    "緑クロス": { D:"F", F:"U", U:"B", B:"D", R:"R", L:"L" },
+    "青クロス": { D:"B", B:"U", U:"F", F:"D", R:"R", L:"L" },
+    "オレンジクロス": { D:"L", L:"U", U:"R", R:"D", F:"F", B:"B" },
+    "赤クロス": { D:"R", R:"U", U:"L", L:"D", F:"F", B:"B" }
+  };
+
+  const scrambleEl = document.getElementById("scramble");
+  const colorEl = document.getElementById("color");
+  const resultEl = document.getElementById("result");
+  const statusEl = document.getElementById("status");
+
+  function convertScramble(scramble, crossColor) {
+    const map = conversionMap[crossColor];
+    return scramble.trim().split(/\s+/).filter(Boolean).map(move => {
+      const first = move[0];
+      return (map[first] || first) + move.slice(1);
+    }).join(" ");
+  }
+
+  document.getElementById("convert").addEventListener("click", () => {
+    const scramble = scrambleEl.value.trim();
+    statusEl.textContent = "";
+    if (!scramble) {
+      resultEl.textContent = "先にスクランブルを入力してください。";
+      return;
+    }
+    resultEl.textContent = convertScramble(scramble, colorEl.value);
+  });
+
+  document.getElementById("copy").addEventListener("click", async () => {
+    const result = resultEl.textContent;
+    statusEl.textContent = "";
+    if (!result || result === "ここに変換結果が表示されます。" ||
+        result === "先にスクランブルを入力してください。") {
+      statusEl.textContent = "先にスクランブルを変換してください。";
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(result);
+      statusEl.textContent = "コピーしました。貼り付けて使えます。";
+    } catch (err) {
+      const range = document.createRange();
+      range.selectNodeContents(resultEl);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      statusEl.textContent = "結果を選択しました。長押ししてコピーしてください。";
+    }
+  });
+</script>
+</body>
+</html>
